@@ -13,11 +13,12 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
+import java.time.ZonedDateTime; 
 import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doNothing; // Crucial for void methods
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -44,11 +45,13 @@ public class FlightControllerTest {
         request.setAirlineName("Test Air");
         request.setSource("A");
         request.setDestination("B");
-        request.setDepartureTime("2023-01-01T10:00:00");
-        request.setArrivalTime("2023-01-01T12:00:00");
         request.setPrice(100.0);
         request.setTotalSeats(100);
         request.setAircraft("747");
+        
+        // FIXED: Added required Date fields to pass validation
+        request.setDepartureTime(ZonedDateTime.now());
+        request.setArrivalTime(ZonedDateTime.now().plusHours(2));
 
         FlightResponse response = new FlightResponse();
         response.setFlightId("F123");
@@ -68,6 +71,7 @@ public class FlightControllerTest {
         request.setSource("DEL");
         request.setDestination("BOM");
         request.setDepartureDate(LocalDate.now());
+        request.setJourneyType("ONE_WAY"); 
 
         FlightResponse response = new FlightResponse();
         response.setFlightId("F123");
@@ -102,40 +106,61 @@ public class FlightControllerTest {
     }
 
     @Test
+    void testSearchFlights_ValidationFailure() throws Exception {
+        FlightSearchRequest request = new FlightSearchRequest();
+        request.setDestination("BOM");
+        request.setJourneyType("ONE_WAY");
+        
+        mockMvc.perform(post("/api/flight/search")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.source").value("Provide the journey source"));
+    }
+
+    @Test
     void testUpdateSeats_Success() throws Exception {
-        doNothing().when(flightService).updateAvailableSeats("F1", 2);
+        List<String> seats = List.of("1A", "1B");
+        doNothing().when(flightService).updateAvailableSeats("F1", seats);
 
         mockMvc.perform(put("/api/flight/F1/update-seats")
-                .param("seats", "2"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(seats)))
                 .andExpect(status().isOk())
                 .andExpect(content().string("Seats updated successfully"));
     }
 
     @Test
     void testUpdateSeats_Failure() throws Exception {
-        doThrow(new RuntimeException("Error")).when(flightService).updateAvailableSeats("F1", 2);
+        List<String> seats = List.of("1A");
+        doThrow(new RuntimeException("Error")).when(flightService).updateAvailableSeats("F1", seats);
 
         mockMvc.perform(put("/api/flight/F1/update-seats")
-                .param("seats", "2"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(seats)))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void testReleaseSeats_Success() throws Exception {
-        doNothing().when(flightService).releaseSeats("F1", 2);
+        List<String> seats = List.of("1A");
+        doNothing().when(flightService).releaseSeats("F1", seats);
 
         mockMvc.perform(put("/api/flight/F1/release-seats")
-                .param("seats", "2"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(seats)))
                 .andExpect(status().isOk())
                 .andExpect(content().string("Seats released successfully"));
     }
 
     @Test
     void testReleaseSeats_Failure() throws Exception {
-        doThrow(new RuntimeException("Error")).when(flightService).releaseSeats("F1", 2);
+        List<String> seats = List.of("1A");
+        doThrow(new RuntimeException("Error")).when(flightService).releaseSeats("F1", seats);
 
         mockMvc.perform(put("/api/flight/F1/release-seats")
-                .param("seats", "2"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(seats)))
                 .andExpect(status().isBadRequest());
     }
 }
