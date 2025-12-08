@@ -8,7 +8,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class GlobalExceptionHandlerTest {
+class GlobalExceptionHandlerTest {
 
     private final GlobalExceptionHandler handler = new GlobalExceptionHandler();
 
@@ -17,6 +17,7 @@ public class GlobalExceptionHandlerTest {
         ResourceNotFoundException ex = new ResourceNotFoundException("Not found");
         ResponseEntity<Map<String, Object>> res = handler.handleNotFound(ex);
         assertEquals(HttpStatus.NOT_FOUND, res.getStatusCode());
+        assertEquals("Not found", res.getBody().get("message"));
     }
 
     @Test
@@ -24,6 +25,7 @@ public class GlobalExceptionHandlerTest {
         BadRequestException ex = new BadRequestException("Bad request");
         ResponseEntity<Map<String, Object>> res = handler.handleBadRequest(ex);
         assertEquals(HttpStatus.BAD_REQUEST, res.getStatusCode());
+        assertEquals("Bad request", res.getBody().get("message"));
     }
 
     @Test
